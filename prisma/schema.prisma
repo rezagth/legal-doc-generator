@@ -1,0 +1,138 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  accounts      Account[]
+  sessions      Session[]
+  documents     Document[]
+  subscription  Subscription?
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum DocumentType {
+  LEGAL_NOTICE
+  TERMS_OF_SERVICE
+  PRIVACY_POLICY
+}
+
+enum BusinessType {
+  FREELANCE
+  ECOMMERCE
+  SAAS
+  BLOG
+  CONSULTING
+  OTHER
+}
+
+model Document {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type        DocumentType
+  businessType BusinessType
+  
+  // Company info
+  companyName     String
+  legalForm       String?
+  siret           String?
+  address         String
+  city            String
+  zipCode         String
+  country         String
+  phone           String?
+  email           String
+  
+  // Website info
+  websiteUrl      String?
+  hostingProvider String?
+  
+  // Business specific
+  vatNumber       String?
+  sellsPhysical   Boolean  @default(false)
+  sellsDigital    Boolean  @default(false)
+  hasSubscription Boolean  @default(false)
+  
+  // Generated content
+  htmlContent     String?
+  pdfUrl          String?
+  markdownContent String?
+  
+  language        String   @default("fr")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+enum SubscriptionTier {
+  FREE
+  PREMIUM
+  ENTERPRISE
+}
+
+model Subscription {
+  id                String           @id @default(cuid())
+  userId            String           @unique
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  tier              SubscriptionTier @default(FREE)
+  stripeCustomerId  String?          @unique
+  stripeSubscriptionId String?       @unique
+  stripePriceId     String?
+  stripeCurrentPeriodEnd DateTime?
+  
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
